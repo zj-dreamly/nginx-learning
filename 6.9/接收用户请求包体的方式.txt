@@ -1,0 +1,19 @@
+
+
+
+	指令：
+		proxy_request_buffering on;
+		client_max_body_size 1M
+		client_body_buffer_size 16k;
+		client_body_in_single_buffer on;
+			# 	指示是否将请求体完整的写入到一个连续的内存中，默认未off；若为on，则Nginx会保证在请求体不大于client_body_buffer_size时，都存放到一块连续的内存中，但超过大小时仍然会整体写入到磁盘的临时文件中
+		client_body_temp_path client_body_temp;
+		client_body_in_file_only on;
+		
+			off		禁用文件写入
+			clean	请求体将被写入文件，但在处理完请求后删除
+			off		请求体将被写入文件，处理完请求后不删除
+	
+	
+	
+		proxy_buffer_size size
