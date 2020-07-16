@@ -247,7 +247,8 @@ Context:    main
 ```
 
 这个指令用于调试。
- 当出现内部错误时，如在重启worker时socket泄漏，设置了 `debug_points` 会产生 core 文件或停止process，以便调试系统收集更多的信息来分析。
+
+当出现内部错误时，如在重启worker时socket泄漏，设置了 `debug_points` 会产生 core 文件或停止process，以便调试系统收集更多的信息来分析。
 
 **error_log**
 
@@ -274,8 +275,10 @@ access_log syslog:server=[2001:db8::1]:12345,facility=local7,tag=nginx,severity=
 
 第二个可选参数 `level` ，设置日志的等级，可使用的值有：
  `debug`, `info`, `notice`, `warn`, `error`, `crit`, `alert`, `emerg`. 上述等级严重性也顺序递增。
- 设置其中一个等级，日志中出现的内容包括本等级及等级后边的日志等级，例如：如果设置日志等级为 `error` ，则所有的的 `error` 和 `crit` 、`alert` 以及 `emerg` 等级的日志也会出现。
- 配置为 `debug` 等级，必须在编译时使用了 `--with-debug` 参数。
+
+设置其中一个等级，日志中出现的内容包括本等级及等级后边的日志等级，例如：如果设置日志等级为 `error` ，则所有的的 `error` 和 `crit` 、`alert` 以及 `emerg` 等级的日志也会出现。
+
+配置为 `debug` 等级，必须在编译时使用了 `--with-debug` 参数。
 
 **env**
 
@@ -295,7 +298,8 @@ Nginx默认会移除继承自父进程的所有变量（TZ变量除外），`env
 - worker 进程中使用的变量，我们须知道，这种方式控制系统库不总是有效的，因为系统库通常只在初始化的时候检查变量，之前他们可以使用这个指令，有一个例外的情况，就是上面提到的在线升级的文件
 
 TZ变量总是被继承的，来自 `ngx_http_perl_module` 模块，除非有对它有显式的配置。
- 示例
+
+ 示例：
 
 ```jsx
 env MALLOC_OPTIONS;
@@ -393,7 +397,7 @@ Context:    event
 
 设置单个worker进程能同时打开的最大连接数。
 
- 切记，这个数值包含所有的连接（包括跟后端server间的连接，不仅仅是跟客户端间的连接），另外要注意的
+切记，这个数值包含所有的连接（包括跟后端server间的连接，不仅仅是跟客户端间的连接），另外要注意的
 
 是，这个数值不能大于单个worker进程能打开的最大文件数限制（这个值可由 `worker_rlimit_nofile` 指令设置）。
 
@@ -599,7 +603,8 @@ worker_cpu_affinity 0101 1010;
 ```
 
 这里将第一个worker绑定到CPU0和CPU2上，将worker 2绑定到CPU1和CPU3上。这个例子适合超线程。
- 也可以设置`auto`值，让系统自动的绑定CPU到具体的worker上。如：
+
+也可以设置`auto`值，让系统自动的绑定CPU到具体的worker上。如：
 
 ```cpp
 worker_processes auto;
@@ -639,7 +644,8 @@ Context:    main
 ```
 
 定义Nginx的worker进程的数量。
- 最佳值取决于很多因素，包括（但不限于）CPU的核数、硬盘分区的数量、负载模式。如果不知怎么设置好，将该值设置为CPU的数量不失一个不错的选择（设置了 `auto` 的话，Nginx将会自动侦探CPU的核数）
+
+最佳值取决于很多因素，包括（但不限于）CPU的核数、硬盘分区的数量、负载模式。如果不知怎么设置好，将该值设置为CPU的数量不失一个不错的选择（设置了 `auto` 的话，Nginx将会自动侦探CPU的核数）
 
 **worker_rlimit_core**
 
@@ -650,6 +656,7 @@ Context:    main
 ```
 
 设置每个worker最大能打开的核心文件数，用于突破上限而不用重启master进程。
+
  core文件中Nginx发生crash的时候会产生的文件。一般用于调试,gdb等。
 
 > worker_rlimit_core  50M;
@@ -664,7 +671,8 @@ Context:    main
 ```
 
 设置每个worker最大能打开的核件数，用于突破上限而不用重启master进程。
- 这个值未设置的话，采用系统的值，`ulimit -a`，一般会把它调高点，以防报错 "too many open files" 的问题。
+
+这个值未设置的话，采用系统的值，`ulimit -a`，一般会把它调高点，以防报错 "too many open files" 的问题。
 
 > worker_rlimit_nofile 100000;
 
