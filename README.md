@@ -200,9 +200,492 @@ nginx -t
 | pcre                         | with | without | N/A                                                          |
 | stream                       | with | N/A     | 禁用                                                         |
 
-#### devel包及非devel包的区
+### devel包及非devel包的区
 
 devel 包主要是供开发用，至少包括以下2个东西:
 
 1. 头文件 
 2. 链接库 有的还含有开发文档或演示代码。 以 glib 和 glib-devel 为例: 如果你安装基于 glib 开发的程序，只需要安装 glib 包就行了。但是如果你要编译使用了 glib 的源代码，则需要安装 glib-devel。
+
+### Nginx Core参数配置说明
+
+先来一个配置示例：
+
+```php
+user www www;
+worker_processes 2;
+
+error_log /var/log/nginx-error.log info;
+
+events {
+    use kqueue;
+    worker_connections 2048;
+}
+
+...
+```
+
+**daemon**
+
+```csharp
+Syntax:     daemon on | off;
+Default:    
+
+daemon on;
+
+Context:    main
+```
+
+指示Nginx是否需要成为守护进程，一般用于开发期间。
+
+**debug_points**
+
+```cpp
+Syntax:     debug_points abort | stop;
+Default:    —
+Context:    main
+```
+
+这个指令用于调试。
+ 当出现内部错误时，如在重启worker时socket泄漏，设置了 `debug_points` 会产生 core 文件或停止process，以便调试系统收集更多的信息来分析。
+
+**error_log**
+
+```cpp
+Syntax:     error_log file [level];
+Default:    
+
+error_log logs/error.log error;
+
+Context:    main, http, mail, stream, server, location
+```
+
+配置Nginx的日志，同等级日志可以有多条日志配置。如果 `main` 级别的配置没有明确定义，也即没有定义日志文件，那么Nginx将使用默认的文件来输出日志。
+
+第一个参数 `file` 定义了存放日志文件的路径，如果是 `stderr` ，则日志直接输出到系统标准输入输出上，如果需要将日志传输到另外的日志服务器上，可配置 `syslog`,以 `syslog:` 为前缀，如 `syslog:server=address[,parameter=value]`,还可以设置参数 `memory`来将日志记录到 `cyclic memory buffer` 中。
+
+```bash
+示例：
+error_log syslog:server=192.168.1.1 debug;
+
+access_log syslog:server=unix:/var/log/nginx.sock,nohostname;
+access_log syslog:server=[2001:db8::1]:12345,facility=local7,tag=nginx,severity=info combined;
+```
+
+第二个可选参数 `level` ，设置日志的等级，可使用的值有：
+ `debug`, `info`, `notice`, `warn`, `error`, `crit`, `alert`, `emerg`. 上述等级严重性也顺序递增。
+ 设置其中一个等级，日志中出现的内容包括本等级及等级后边的日志等级，例如：如果设置日志等级为 `error` ，则所有的的 `error` 和 `crit` 、`alert` 以及 `emerg` 等级的日志也会出现。
+ 配置为 `debug` 等级，必须在编译时使用了 `--with-debug` 参数。
+
+**env**
+
+```csharp
+Syntax:     env variable[=value];
+Default:    
+
+env TZ;
+
+Context:    main
+```
+
+Nginx默认会移除继承自父进程的所有变量（TZ变量除外），`env` 指令允许从父进程继承变量、更改变量、创建新变量。这些变量包括：
+
+- 继承自在线升级的二进制文件
+- `ngx_http_perl_module` 模块使用的变量
+- worker 进程中使用的变量，我们须知道，这种方式控制系统库不总是有效的，因为系统库通常只在初始化的时候检查变量，之前他们可以使用这个指令，有一个例外的情况，就是上面提到的在线升级的文件
+
+TZ变量总是被继承的，来自 `ngx_http_perl_module` 模块，除非有对它有显式的配置。
+ 示例
+
+```jsx
+env MALLOC_OPTIONS;
+env PERL5LIB=/data/site/modules;
+env OPENSSL_ALLOW_PROXY_CERTS=1;
+```
+
+**events**
+
+```php
+Syntax:     events { ... }
+Default:    —
+Context:    main
+```
+
+设置event的一些参数配置。
+
+```csharp
+Syntax:     accept_mutex on | off;
+Default:    
+
+accept_mutex off;
+
+Context:    events
+```
+
+**accept_mutex**
+
+如果设置允许 `accept_mutex` ，则 worker 会轮流的也即串行的方式接受新连接。其中一个worker被唤醒来处理新来的连接，其他的worker保持不动；如果不允许 `accept_mutex`，Nginx会通知所有的worker，唤醒他们【惊群问题】，以便让其中一个worker来接受处理新来的连接，Nginx默认禁用该功能（一个保守的设置，预防惊群问题）。
+ 1.11.3版本之前，该功能默认是开启的。
+
+**accept_mutex_delay**
+
+```php
+Syntax:     accept_mutex_delay time;
+Default:    
+
+accept_mutex_delay 500ms;
+
+Context:    events
+```
+
+跟上面的 `accept_mutex` 搭配设置的，如果启用了 `accept_mutex`，这个参数是设置每个worker在别的worker试图接受处理新连接后，必须要等待的最大时间，是一种锁机制，保护避免惊群现象，防止所有worker都呼啦一下子来获取这个新连接。默认为500ms,0.5s。
+
+**debug_connection**
+
+```objectivec
+Syntax:     debug_connection address | CIDR | unix:;
+Default:    —
+Context:    events
+```
+
+允许指定的客户端IP调试日志，其他IP使用 `error_log` 指令设置的级别来输出日志。调试日志IP使用IPV4或网段，也可以指定主机名，unix socket等。
+
+示例:
+
+> events {
+>  debug_connection 127.0.0.1;
+>  debug_connection localhost;
+>  debug_connection 192.0.2.0/24;
+>  debug_connection ::1;
+>  debug_connection 2001:0db8::/32;
+>  debug_connection unix:;
+>  ...
+>  }
+>  要正常使用该功能，必须在编译时使用 `--with-debug` 参数。
+
+**worker_aio_requests**
+
+```css
+Syntax:     worker_aio_requests number;
+Default:    
+
+worker_aio_requests 32;
+
+Context:    event
+
+This directive appeared in versions 1.1.4 and 1.0.7. 
+```
+
+仅出现在V1.1.4和V1.0.7上。
+
+当在 `epoll` 上 使用 `aio` 时，设置单个 worker 进程未处理的异步IO数量。
+
+**worker_connections**
+
+```csharp
+Syntax:     worker_connections number;
+Default:    
+
+worker_connections 512;
+
+Context:    event
+```
+
+设置单个worker进程能同时打开的最大连接数。
+
+ 切记，这个数值包含所有的连接（包括跟后端server间的连接，不仅仅是跟客户端间的连接），另外要注意的
+
+是，这个数值不能大于单个worker进程能打开的最大文件数限制（这个值可由 `worker_rlimit_nofile` 指令设置）。
+
+**use**
+
+```php
+Syntax:     use method;
+Default:    —
+Context:    events
+```
+
+设定使用什么类型的事件处理类型，可选值有如下：
+
+- `select`,标准方法，各平台默认自动编译支持，如果没有更有效的方法是，使用该方法。`--with-select_module` 和 `--without-select_module` 这2个编译参数可以强制设定是否使用 select 或不使用 select.
+- `poll` ，标准方法，各平台默认自动编译支持，如果没有更有效的方法是，使用该方法。`--with-poll_module` 和 `--without-poll_module` 这2个编译参数可以强制设定是否使用 select 或不使用 select.
+- `kqueue` ，在FreeBSD 4.1+, OpenBSD 2.9+, NetBSD 2.0, 和 macOS 等系统上更高效的方法。
+- `epoll` ，在Linux 2.6+ 上更高效的方法。
+- `/dev/poll` , Solaris 7 11/99+, HP/UX 11.22+ , IRIX 6.5.15+, 和 Tru64 UNIX 5.1A+ 系统上更高效的方法。
+- `eventport` ,Solaris 10 系统上更高效的方法。
+
+**multi_accept**
+
+```csharp
+Syntax:     multi_accept on | off;
+Default:    
+
+multi_accept off;
+
+Context:    events
+```
+
+设置了 `multi_accept` off 后，worker进程一次只能处理一个连接，设置为on的时候，worker 进程一次可以接受所有连接。
+
+**include**
+
+```php
+Syntax:     include file | mask;
+Default:    —
+Context:    any
+```
+
+这个指令配置嵌套的配置文件，即走Nginx.conf里再包含一个其他的配置文件，可放在配置文件的任何位置。
+
+```php
+include mime.types;
+include vhosts/*.conf;
+```
+
+**load_module**
+
+```css
+Syntax:     load_module file;
+Default:    —
+Context:    main
+
+This directive appeared in version 1.9.11. 
+```
+
+加载一个模块。
+
+示例：
+
+```tsx
+load_module modules/ngx_mail_module.so;
+```
+
+**lock_file**
+
+```csharp
+Syntax:     lock_file file;
+Default:    
+
+lock_file logs/nginx.lock;
+
+Context:    main
+```
+
+Nginx使用锁机制来实现 `accept_mutex` 以及序列化访问来实现共享内存，大多数系统使用原子操作来实现锁，那么这个指令将会被忽略，其他一些系统使用 `lock file`来实现锁，这个指令设置锁的名称和路径前缀。
+
+**master_process**
+
+```csharp
+Syntax:     master_process on | off;
+Default:    
+
+master_process on;
+
+Context:    main
+```
+
+这是一个给Nginx开发者使用的指令，标识worker进程是否已启动。
+
+**pcre_jit**
+
+```csharp
+Syntax:     pcre_jit on | off;
+Default:    
+
+pcre_jit off;
+
+Context:    main
+
+This directive appeared in version 1.1.12. 
+```
+
+设置是否允许 JIT  编译的开关，启用 JIT 能极大的提高正则表达式处理的速度。
+
+**pid**
+
+```css
+Syntax:     pid file;
+Default:    
+
+pid nginx.pid;
+
+Context:    main
+```
+
+设置 pid 存放到哪个文件里。
+
+**ssl_engine**
+
+```php
+Syntax:     ssl_engine device;
+Default:    —
+Context:    main
+```
+
+定义硬件SSL加速器的名称。
+
+**thread_pool**
+
+```tsx
+Syntax:     thread_pool name threads=number [max_queue=number];
+Default:    
+
+thread_pool default threads=32 max_queue=65536;
+
+Context:    main
+
+This directive appeared in version 1.7.11. 
+```
+
+定义一个线程池的名称，用来非阻塞的使用多线程读取或发送文件。
+ `threads` 参数是线程池大小的数值，如果线程池中的所有线程均处于忙碌状态，新任务将会在队列里等候，`max_queue` 设置了队列里可等待的最大值，默认为 65536 ，如果队列溢出了，新任务将以错误结束。
+
+**timer_resolution**
+
+```php
+Syntax:     timer_resolution interval;
+Default:    —
+Context:    main
+```
+
+worker进程中的减时计时器，因此会调用 `gettimeofday()` ,默认情况下，每收到一次内核事件将会调用一次 `gettimeofday()` ，使用减时方案，`gettimeofday()`只会在设定的时间间隔内调用一次。如：
+
+```undefined
+timer_resolution 100ms;
+```
+
+内部时间的时间间隔取决于使用如下哪个方法：
+
+- 如果使用`kqueue`，则值为 `EVFILT_TIMER`
+- 如果使用`eventport`，则值为 `timer_create()`
+- 其他情况为 `setitimer()`
+
+**user**
+
+```csharp
+Syntax:     user user [group];
+Default:    
+
+user nobody nobody;
+
+Context:    main
+```
+
+定义Nginx运行时的用户和组，如果组没有指定，则用户和组一致。
+
+**worker_cpu_affinity**
+
+```cpp
+Syntax:     worker_cpu_affinity cpumask ...;
+worker_cpu_affinity auto [cpumask];
+Default:    —
+Context:    main
+```
+
+设置CPU亲和性，每个CPU使用位掩码来描述其亲和性，需要单独设置每个worker，默认情况下，worker进程不绑定任何CPU。
+
+示例：
+
+```cpp
+worker_processes    4;
+worker_cpu_affinity 0001 0010 0100 1000;  //4个worker，所以要对每个worker都进行设置。
+```
+
+又如示例
+
+```undefined
+worker_processes    2;
+worker_cpu_affinity 0101 1010;
+```
+
+这里将第一个worker绑定到CPU0和CPU2上，将worker 2绑定到CPU1和CPU3上。这个例子适合超线程。
+ 也可以设置`auto`值，让系统自动的绑定CPU到具体的worker上。如：
+
+```cpp
+worker_processes auto;
+worker_cpu_affinity auto;
+```
+
+也可用掩码来设定自动绑定到哪些CPU上，即有些CPU不用于Nginx。如：
+
+```cpp
+worker_cpu_affinity auto 01010101;//8个CPU，只有CPU0,CPU2,CPU4,CPU6这几颗CPU参与自动绑定。
+```
+
+这个指令仅用于Linux和FreeBSD。
+
+**worker_priority**
+
+```php
+Syntax:     worker_priority number;
+Default:    
+
+worker_priority 0;
+
+Context:    main
+```
+
+定义 Nginx 的 worker 进程的优先级，就像 `nice` 命令一样：负值意味着更高的优先级，可选范围是 -20 到 20。
+
+**worker_processes**
+
+```cpp
+Syntax:     worker_processes number | auto;
+Default:    
+
+worker_processes 1;
+
+Context:    main
+```
+
+定义Nginx的worker进程的数量。
+ 最佳值取决于很多因素，包括（但不限于）CPU的核数、硬盘分区的数量、负载模式。如果不知怎么设置好，将该值设置为CPU的数量不失一个不错的选择（设置了 `auto` 的话，Nginx将会自动侦探CPU的核数）
+
+**worker_rlimit_core**
+
+```php
+Syntax:     worker_rlimit_core size;
+Default:    —
+Context:    main
+```
+
+设置每个worker最大能打开的核心文件数，用于突破上限而不用重启master进程。
+ core文件中Nginx发生crash的时候会产生的文件。一般用于调试,gdb等。
+
+> worker_rlimit_core  50M;
+>  working_directory   /tmp/;
+
+**worker_rlimit_nofile**
+
+```php
+Syntax:     worker_rlimit_nofile number;
+Default:    —
+Context:    main
+```
+
+设置每个worker最大能打开的核件数，用于突破上限而不用重启master进程。
+ 这个值未设置的话，采用系统的值，`ulimit -a`，一般会把它调高点，以防报错 "too many open files" 的问题。
+
+> worker_rlimit_nofile 100000;
+
+**worker_shutdown_timeout**
+
+```css
+Syntax:     worker_shutdown_timeout time;
+Default:    —
+Context:    main
+
+This directive appeared in version 1.11.11. 
+```
+
+配置Nginx能优雅的停止，如果超过时间还未停止，Nginx会关闭当前所有连接，来保证Nginx停止。
+
+**working_directory**
+
+```php
+Syntax:     working_directory directory;
+Default:    —
+Context:    main
+```
+
+设定Nginx的worker进程的工作目录，仅用于定义core文件的位置，该目录必须要让Nginx的运行时用户有写的权限，一般会配套的有 `worker_rlimit_core` 指令设置。
