@@ -247,3 +247,58 @@ location /picture {
 #### 匹配顺序
 
 `=` ＞`＾～`＞`～`＞`～＊`＞不带任何字符
+
+#### URL写法区别
+
+```nginx
+# 首先查询root目录是否有test文件夹，然后查找test文件夹里的index.html，如果查找不到，那么查询root目录是否有test文件
+location /test {
+    ......
+}
+# 只会查询是否test文件夹
+location /test/ {
+    ......
+}
+```
+
+### limit _conn
+
+- 用于限制客户端并发连接数
+- 默认编译进nginx，通过`without-http_limit_conn_module`禁用
+- 使用共享内存，对所有的worker子进程生效
+
+#### 常用指令
+
+- limit_conn_zone
+
+- limit_conn_status
+- limit_conn_log_level
+- limit_conn
+
+### limit_req
+
+- 用于限制客户端处理请求的平均速率
+- 默认编译进nginx，通过`without-http_limit_req_module`禁用
+- 使用共享内存，对所有的worker子进程生效
+- 限流算法：leaky_bucket
+
+#### 常用指令
+
+- limit_req
+- limit_req_log_level
+- limit_req_zone
+
+更多配置参考：http://tengine.taobao.org/nginx_docs/cn/docs
+
+### http_access
+
+- allow
+- deny
+
+### auth_basic
+
+- auth_basic
+- auth_basic_user_file
+
+
+
