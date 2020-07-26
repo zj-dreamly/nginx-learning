@@ -300,5 +300,84 @@ location /test/ {
 - auth_basic
 - auth_basic_user_file
 
+### auth_request
 
+- auth_request
+- auth_request_set
+
+### return
+
+- 停止处理请求，直接返回响应码或重定向到其他URL
+- 执行return指令后，location中后续指令将不会被执行
+
+### rewrite
+
+- 根据指定正则表达式匹配规则，重写URL
+
+### if
+
+- 条件判断
+
+### auto_index
+
+- autoindex_exact_size
+- autoindex_format
+- autoindex_localtime
+
+### Nginx变量分类
+
+#### TCP连接变量
+
+| 变量                | 含义                                                       |
+| ------------------- | ---------------------------------------------------------- |
+| remote_addr         | 客户端IP地址                                               |
+| remote_port         | 客户端端口                                                 |
+| server_addr         | 服务端IP地址                                               |
+| server_port         | 服务端端口                                                 |
+| server_protocol     | 服务端协议                                                 |
+| binary_remote_addr  | 二进制格式的客户端IP地址                                   |
+| onnection           | TCP链接的序号，递增                                        |
+| connection_request  | TCP链接当前的请求数量                                      |
+| proxy_protocol_addr | 若使用了proxy_protocol协议，则返回协议中的地址，否则返回空 |
+| proxy_protocol_port | 若使用了proxy_protocol协议，则返回协议中的端口，否则返回空 |
+
+#### HTTP请求变量
+
+| 变量                 | 含义                                         |
+| -------------------- | -------------------------------------------- |
+| uri                  | 请求的URL，不包含参数                        |
+| request_uri          | 请求的URL，包含参数                          |
+| scheme               | 协议名，http或https                          |
+| request_method       | 请求方法                                     |
+| request_length       | 全部请求的长度，包括请求行，请求头，请求体   |
+| args                 | 全部参数字符串                               |
+| arg_参数名           | 特定参数值                                   |
+| is_args              | URL中有参数，则返回?，负责返回空             |
+| query_string         | 与args相同                                   |
+| remote_user          | 由HTTP Basic Authentication协议传入的用户名  |
+| host                 | 先看请求行，再看请求头，最后找server_name    |
+| http_user_agent      | 用户浏览器                                   |
+| http_referer         | 从哪些链接过来的请求                         |
+| http_via             | 经过一层代理服务器，添加对应代理服务器的信息 |
+| http_x_forwarded_for | 获取用户真实IP                               |
+| http_cookie          | 用户cookie                                   |
+
+#### Nginx处理HTTP请求产生的变量
+
+| 变量               | 含义                                  |
+| ------------------ | ------------------------------------- |
+| request_time       | 处理请求已耗费的时间                  |
+| request_completion | 请求处理完成返回OK，否则返回空        |
+| server_name        | 匹配上请求的server_name值             |
+| https              | 若开启https，则返回on，否则返回空     |
+| request_filename   | 磁盘文件系统待访问文件的完整路径      |
+| document_root      | 由URI和root/alias规则生成的文件夹路径 |
+| realpath_root      | 将document_root中的软链接换成真实路径 |
+| limit_rate         | 返回响应时的速度上限值                |
+
+#### Nginx返回响应变量
+
+#### Nginx内部变量
+
+### 反向代理
 
