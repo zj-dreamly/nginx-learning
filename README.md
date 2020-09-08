@@ -381,3 +381,94 @@ location /test/ {
 
 ### 反向代理
 
+- 反向代理服务器介于用户与真实服务器之间，提供请求和响应的中转服务
+- 对于用户而言，访问反向代理服务器就是访问真实服务器
+- 反向代理可以有效降服务器的负载消耗，提升效率
+
+#### upstream
+
+- 用于定义上游服务的相关信息
+
+- 指令集说明：http://tengine.taobao.org/nginx_docs/cn/docs/http/ngx_http_upstream_module.html#variables
+
+#### proxy_pass用法常见误区
+
+##### 带`/`和不带`/`用法区别
+
+- 不带 / 意味着Nginx不会修改用户URL，而是直接透传给上游的服务器
+- 带 / 意味着Nginx会修改用户URL，修改方法：将location后的URL从用户URL中删除
+
+**示例**
+
+- 不带 / 示例
+
+```nginx
+location /bbs/ {
+    proxy_pass http://127.0.0.1:8080;
+}
+
+# 用户请求url：/bbs/abc/test.html
+# 请求到达Nginx的url：/bbs/abc/test.html
+# 请求到达上游服务器的url: /bbs/abc/test.html
+```
+
+- 带 / 示例
+
+```nginx
+location /bbs/ {
+    proxy_pass http://127.0.0.1:8080/;
+}
+
+# 用户请求url：/bbs/abc/test.html
+# 请求到达Nginx的url：/bbs/abc/test.html
+# 请求到达上游服务器的url: /abc/test.html
+```
+
+#####  代理到上游服务器的URL结尾是否有必要加`/`
+
+- 上游服务器是否有该前缀，有的话就不加，没有的话就加
+
+#### Nginx处理request_body
+
+```nginx
+upstream back_end {
+	server 192.168.184.20:8080 weight=2 max_conns=1000 fail_timeout=10s max_fails=3;
+	# 最大空闲长连接数
+    keepalive 32;
+    # 在此长连接上最大的请求数，超过则会直接断开连接
+	keepalive_requests 80;
+    # 长连接的超时时间
+	keepalive_timeout 20s;
+} 
+
+server {
+	listen 80;
+	server_name proxy.kutian.edu;
+
+	location /proxy/ {
+	    proxy_pass http://back_end/proxy;
+	}
+
+	location /bbs/ {
+	   proxy_pass http://192.168.184.20:8050/;
+	}
+    
+    location /receive/ {
+        proxy_pass http://test_server;
+        # 最大请求体大小，如果需要通过nginx上传图片等资源，需要设置大一点
+        client_max_body_size 250k;
+        # 缓冲区大小，当请求体的大小超过此大小时，nginx会把请求体写入到临时文件中。可以根据业务需求设置合适的大小，尽量避免磁盘io操作
+        client_body_buffer_size 100k;
+        # 本地缓冲区储存路径
+        client_body_temp_path test_body_path;
+
+        client_body_in_file_only on;
+        # 指示是否将请求体完整的存储在一块连续的内存中，默认为off，如果此指令被设置为on，则nginx会保证请求体在不大于client_body_buffer_size设置的值时，被存放在一块连续的内存中，但超过大小时会被整个写入一个临时文件
+        client_body_in_single_buffer on;
+
+        proxy_request_buffering on;
+        clent_body_timeout 30;
+    }
+}
+```
+
