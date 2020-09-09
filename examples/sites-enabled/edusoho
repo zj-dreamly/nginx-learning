@@ -1,0 +1,75 @@
+server {
+    listen 443;
+
+    server_name edu.ormco.ink 101.133.143.185;
+
+    root /var/www/edusoho/web;
+
+    access_log /var/log/nginx/edusoho.access.log;
+    error_log /var/log/nginx/edusoho.error.log;
+    
+    ssl                  on;
+    ssl_certificate      /var/www/ssl/4417083_edu.ormco.ink.pem;
+    ssl_certificate_key  /var/www/ssl/4417083_edu.ormco.ink.key;
+
+    ssl_protocols  TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers AESGCM:ALL:!DH:!EXPORT:!RC4:+HIGH:!MEDIUM:!LOW:!aNULL:!eNULL;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:50m;
+
+    location / {
+        index app.php;
+        try_files $uri @rewriteapp;
+    }
+
+    location @rewriteapp {
+        rewrite ^(.*)$ /app.php/$1 last;
+    }
+
+    location ~ ^/udisk {
+        internal;
+        root  /var/www/edusoho/app/data/;
+    }
+
+    location ~ ^/(app|app_dev)\.php(/|$) {
+        fastcgi_pass   127.0.0.1:9000;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
+        fastcgi_param  HTTPS              on;
+        fastcgi_param HTTP_X-Sendfile-Type X-Accel-Redirect;
+        fastcgi_param HTTP_X-Accel-Mapping /udisk=/var/www/edusoho/app/data/udisk;
+        fastcgi_buffer_size 128k;
+        fastcgi_buffers 8 128k;
+    }
+
+    location ~* \.(jpg|jpeg|gif|png|ico|swf)$ {
+        expires 3y;
+        access_log off;
+        gzip off;
+    }
+
+    location ~* \.(css|js)$ {
+        access_log off;
+        expires 3y;
+    }
+
+    location ~ ^/files/.*\.(php|php5)$ {
+        deny all;
+    }
+
+    location ~ \.php$ {
+        
+        fastcgi_pass   127.0.0.1:9000;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
+        fastcgi_param  HTTPS              on;
+    }
+}
+
+  server {
+        listen 80;
+        server_name edu.ormco.ink;
+        rewrite ^ https://$http_host$request_uri? permanent; 
+     }
