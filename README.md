@@ -483,4 +483,62 @@ server {
 - 哈希算法
 - ip_hash算法
 - 最少连接数算法
+- proxy_next_upstream 
+
+### 缓存
+
+- 客户端缓存
+
+- 服务端缓存
+
+#### 指令
+
+- proxy_cache
+- proxy_cache_path
+- proxy_cache_key
+- proxy_cache_valid
+- upstream_cache_status
+- proxy_no_cache
+- proxy_cache_lock
+- proxy_cache_lock_timeout
+- proxy_cache_lock_age
+- proxy_cache_use_stale
+- proxy_cache_background_update
+- proxy_cache_purge
+
+### HTTPS
+
+#### 加密算法
+
+##### 对称加密
+
+- DES, AES, 3DES
+- 优势
+  - 解密效率高
+- 劣势
+  - 密钥无法实现安全传输
+  - 密钥的数目难以维护
+  - 无法提供信息完整性校验
+
+##### 非对称加密
+
+- RSA, DSA, ECC
+- 优势
+  - 服务器仅维护一个私钥即可
+- 劣势
+  - 公钥是公开的
+  - 非对称加密算法加解密过程中会有一定的时间消耗
+  - 公钥并不包含服务器信息，存在中间人攻击的可能性
+
+#### https的加密原理
+
+- https混合使用对称加密和非对称加密
+- 连接建立阶段使用非对称加密算法
+- 内容传输阶段使用对称加密算法
+
+### Nginx高可用
+
+- VRRP
+- keepalived
+- Fast Open
 
